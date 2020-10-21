@@ -23,7 +23,7 @@ namespace DurableOrchestratorTest.Services
             if (!CanHandle(command))
                 throw new Exception("Can not handle command");
 
-            await System.IO.File.AppendAllTextAsync(@"D:\test.txt", $"{Name} : {command.Parameters}\n");
+            await System.IO.File.AppendAllTextAsync($"D:\\{Name}.txt", $"{DateTime.Now.ToString()} : {command.Parameters}\n");
             await Task.Delay(rdm.Next(2000, 5000));
         }
     }

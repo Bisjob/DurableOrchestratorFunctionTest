@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -53,8 +54,26 @@ namespace DurableOrchestorTest
             };
 
 
-            string instanceId = await starter.StartNewAsync(nameof(RunOrchestrator), commands);
-            return starter.CreateCheckStatusResponse(req, instanceId);
+            // Check if an instance with the specified ID already exists or an existing one stopped running(completed/failed/terminated).
+            var existingInstance = await starter.GetStatusAsync(OrchestratorFunctionId);
+            if (existingInstance == null
+            || existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Completed
+            || existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Failed
+            || existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Terminated)
+            {
+                // An instance with the specified ID doesn't exist or an existing one stopped running, create one.
+                await starter.StartNewAsync(nameof(RunOrchestrator), OrchestratorFunctionId, commands);
+                log.LogInformation($"Started orchestration with ID = '{OrchestratorFunctionId}'.");
+                return starter.CreateCheckStatusResponse(req, OrchestratorFunctionId);
+            }
+            else
+            {
+                // An instance with the specified ID exists or an existing one still running, don't create one.
+                return new HttpResponseMessage(HttpStatusCode.Conflict)
+                {
+                    Content = new StringContent($"An instance with ID '{OrchestratorFunctionId}' already exists."),
+                };
+            }
         }
 
 
